@@ -1,6 +1,6 @@
 [package]
 name = "prog-vb"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["William D. Jones <thor0505@comcast.net>"]
 edition = "2018"
 

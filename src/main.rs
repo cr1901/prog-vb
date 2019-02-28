@@ -4,7 +4,7 @@ extern crate hidapi;
 extern crate exitfailure;
 
 use std::fs::File;
-
+use std::io::Read;
 
 use argparse::{ArgumentParser, Store};
 use failure::Error;
@@ -63,7 +63,7 @@ pub mod vb_prog {
             Ok(WriteToken { _int : () })
         }
 
-        pub fn write_chunk(&mut self, _tok: WriteToken, buf : &[u8; 1024]) -> Result<(), failure::Error> {
+        pub fn write_chunk(&mut self, _tok: &WriteToken, buf : &[u8; 1024]) -> Result<(), failure::Error> {
             let mut packet = [0; 65];
 
             packet[1] = Cmds::Write1024 as u8;
@@ -142,7 +142,14 @@ fn main() -> Result<(), ExitFailure> {
     let tok = flash.init_prog()?;
 
     let mut buf = [0; 1024];
-    flash.write_chunk(tok, &buf)?;
+    let mut packet_cnt = 0;
 
+    while packet_cnt < 2048 {
+        f.read_exact(&mut buf)?;
+        flash.write_chunk(&tok, &buf)?;
+        packet_cnt += 1;
+    }
+
+    println!("Image flashed successfully.");
     Ok(())
 }
