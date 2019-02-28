@@ -8,7 +8,6 @@ use std::fs::File;
 use std::io::Read;
 
 use argparse::{ArgumentParser, Store};
-use failure::Error;
 use exitfailure::ExitFailure;
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -16,8 +15,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 pub mod vb_prog {
     use hidapi;
     use failure::Fail;
-    use std::io::prelude::*;
-    use std::io::{Error as IoError, ErrorKind, Cursor};
 
     pub struct FlashBoy {
         dev : hidapi::HidDevice,
