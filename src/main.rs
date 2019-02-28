@@ -4,7 +4,8 @@ extern crate hidapi;
 extern crate exitfailure;
 
 use std::fs::File;
-use std::io::prelude::*;
+
+
 use argparse::{ArgumentParser, Store};
 use failure::Error;
 use exitfailure::ExitFailure;
@@ -12,9 +13,16 @@ use exitfailure::ExitFailure;
 
 pub mod vb_prog {
     use hidapi;
+    use failure::Fail;
+    use std::io::prelude::*;
+    use std::io::{Error as IoError, ErrorKind, Cursor};
 
     pub struct FlashBoy {
         dev : hidapi::HidDevice,
+    }
+
+    pub struct WriteToken {
+        _int : (),
     }
 
     impl FlashBoy {
@@ -44,18 +52,53 @@ pub mod vb_prog {
             self.dev.write(&buf)?;
 
             self.dev.read(&mut buf)?;
+            self.check_response(&buf, Cmds::Erase)?;
+
             Ok(())
+        }
+
+        pub fn init_prog(&mut self) -> Result<WriteToken, failure::Error> {
+            let mut buf = [0; 65];
+
+            buf[1] = Cmds::StartProg as u8;
+            self.dev.write(&buf)?;
+
+            Ok(WriteToken { _int : () })
+        }
+
+        fn check_response(&self, buf : &[u8], cmd : Cmds) -> Result<(), Error> {
+            if buf[0] == (cmd as u8) {
+                return Ok(())
+            } else {
+                match cmd {
+                    Cmds::Erase => { return Err(Error::UnexpectedEraseResponse { code : buf[1] }) },
+                    _ => { return Err(Error::UnexpectedWriteResponse { code : buf[1] }) },
+                }
+            }
         }
     }
 
+    #[derive(Clone, Copy)]
     enum Cmds {
         Erase = 0xA1,
+        StartProg = 0xB0,
+        Write1024 = 0xB4,
     }
 
     #[derive(Debug, Fail)]
     pub enum Error {
         #[fail(display = "Could not find Flashboy Plus device")]
         FlashboyNotFound,
+
+        #[fail(display = "Bad response from FlashBoy after erase command {:X}", code)]
+        UnexpectedEraseResponse {
+            code : u8,
+        },
+
+        #[fail(display = "Bad response from FlashBoy after write command {:X}", code)]
+        UnexpectedWriteResponse {
+            code : u8,
+        },
     }
 }
 
@@ -79,6 +122,9 @@ fn main() -> Result<(), ExitFailure> {
 
     println!("Erasing device...");
     flash.erase()?;
+
+    println!("Flashing...");
+    let tok = flash.init_prog()?;
 
     Ok(())
 }
