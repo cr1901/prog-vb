@@ -28,10 +28,7 @@ pub mod vb_prog {
     impl FlashBoy {
         pub fn open() -> Result<FlashBoy, failure::Error> {
             let api = hidapi::HidApi::new()?;
-            let device = match api.open(0x1781, 0x09a2) {
-                Ok(x) => { x },
-                Err(_) => { return Err(From::from(Error::FlashboyNotFound)) }
-            };
+            let device = api.open(0x1781, 0x09a2).or(Err(Error::FlashboyNotFound))?;
 
             // Plenty of non-FlashBoy devices use Atmel micros, so check for string.
             if !device.get_product_string()?
@@ -64,6 +61,24 @@ pub mod vb_prog {
             self.dev.write(&buf)?;
 
             Ok(WriteToken { _int : () })
+        }
+
+        pub fn write_chunk(&mut self, _tok: WriteToken, buf : &[u8; 1024]) -> Result<(), failure::Error> {
+            let mut packet = [0; 65];
+
+            packet[1] = Cmds::Write1024 as u8;
+            self.dev.write(&packet)?;
+
+            for p in buf.chunks_exact(64) {
+                let (_, payload) = packet.split_at_mut(1);
+                payload.clone_from_slice(p);
+                self.dev.write(&packet)?;
+            }
+
+            self.dev.read(&mut packet)?;
+            self.check_response(&packet, Cmds::Write1024)?;
+
+            Ok(())
         }
 
         fn check_response(&self, buf : &[u8], cmd : Cmds) -> Result<(), Error> {
@@ -125,6 +140,9 @@ fn main() -> Result<(), ExitFailure> {
 
     println!("Flashing...");
     let tok = flash.init_prog()?;
+
+    let mut buf = [0; 1024];
+    flash.write_chunk(tok, &buf)?;
 
     Ok(())
 }
