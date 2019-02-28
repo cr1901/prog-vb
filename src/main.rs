@@ -36,6 +36,20 @@ pub mod vb_prog {
                 dev : device,
             })
         }
+
+        pub fn erase(&mut self) -> Result<(), failure::Error> {
+            let mut buf = [0; 65];
+
+            buf[1] = Cmds::Erase as u8;
+            self.dev.write(&buf)?;
+
+            self.dev.read(&mut buf)?;
+            Ok(())
+        }
+    }
+
+    enum Cmds {
+        Erase = 0xA1,
     }
 
     #[derive(Debug, Fail)]
@@ -60,7 +74,11 @@ fn main() -> Result<(), ExitFailure> {
         ap.parse_args_or_exit();
     }
 
-    let flash = FlashBoy::open()?;
+    let mut f = File::open(rom)?;
+    let mut flash = FlashBoy::open()?;
+
+    println!("Erasing device...");
+    flash.erase()?;
 
     Ok(())
 }
