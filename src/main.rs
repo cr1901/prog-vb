@@ -2,6 +2,7 @@
 extern crate failure;
 extern crate hidapi;
 extern crate exitfailure;
+extern crate indicatif;
 
 use std::fs::File;
 use std::io::Read;
@@ -9,6 +10,7 @@ use std::io::Read;
 use argparse::{ArgumentParser, Store};
 use failure::Error;
 use exitfailure::ExitFailure;
+use indicatif::{ProgressBar, ProgressStyle};
 
 
 pub mod vb_prog {
@@ -144,12 +146,19 @@ fn main() -> Result<(), ExitFailure> {
     let mut buf = [0; 1024];
     let mut packet_cnt = 0;
 
+    let pb = ProgressBar::new(2048);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("[{elapsed_precise}] [{bar:40}] {pos}/{len} packets ({eta})")
+        .progress_chars("#>-"));
+
     while packet_cnt < 2048 {
         f.read_exact(&mut buf)?;
         flash.write_chunk(&tok, &buf)?;
         packet_cnt += 1;
+        pb.set_position(packet_cnt);
     }
 
+    pb.finish();
     println!("Image flashed successfully.");
     Ok(())
 }
