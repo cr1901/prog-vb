@@ -15,9 +15,17 @@ matrix:
     # Linux
     - env: TARGET=x86_64-unknown-linux-gnu DISABLE_TESTS=1
 
+    # OSX
+    - env: TARGET=x86_64-apple-darwin DISABLE_TESTS=1
+      os: osx
+
+    # Windows
+    - env: TARGET=x86_64-pc-windows-gnu DISABLE_TESTS=1
+
 before_install:
   - set -e
-  - sudo apt-get install -y tofrodos
+  # Required for Windows build, since text files use CRLF.
+  - if [ -z ${TARGET##*windows*} ]; then sudo apt-get install -y dos2unix; fi
   - rustup self update
 
 install:
