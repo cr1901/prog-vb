@@ -42,6 +42,11 @@ main() {
            --git japaric/cross \
            --tag $tag \
            --target $target
+
+    # HIDAPI requires libusb on Linux.
+    if [ -z ${TARGET##*linux*} ]; then
+        docker build -t prog-vb/$TARGET ci/docker/$TARGET
+    fi
 }
 
 main

@@ -17,7 +17,7 @@ matrix:
 
 before_install:
   - set -e
-  - sudo apt-get install -y tofrodos zip
+  - sudo apt-get install -y tofrodos
   - rustup self update
 
 install:
