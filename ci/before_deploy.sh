@@ -29,15 +29,15 @@ main() {
     # TODO Update this to build the artifacts that matter to you
     cross rustc --bin prog-vb --target $TARGET --release -- -C lto
 
-    mkdir $stage/$CRATE_NAME
-    cp target/$TARGET/release/prog-vb$suffix LICENSE.md README.md $stage/$CRATE_NAME
+    mkdir $stage/$CRATE_NAME-$TRAVIS_TAG
+    cp target/$TARGET/release/prog-vb$suffix LICENSE.md README.md $stage/$CRATE_NAME-$TRAVIS_TAG
 
     cd $stage
     if [ $TARGET = x86_64-pc-windows-gnu ]; then
-        unix2dos -s $CRATE_NAME/*.*
-        zip $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.zip $CRATE_NAME/*.*
+        unix2dos -s $CRATE_NAME-$TRAVIS_TAG/*.*
+        zip $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.zip $CRATE_NAME-$TRAVIS_TAG/*.*
     else
-        tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz $CRATE_NAME
+        tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz $CRATE_NAME-$TRAVIS_TAG
     fi
     cd $src
 
