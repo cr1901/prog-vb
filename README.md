@@ -1,4 +1,10 @@
 # Command Line Virtual Boy Flash Programmer
+[![Build Status](https://travis-ci.org/cr1901/prog-vb.svg?branch=master)](https://travis-ci.org/cr1901/prog-vb)
+[![GitHub release](https://img.shields.io/github/release/cr1901/prog-vb.svg)](https://github.com/cr1901/prog-vb/releases)
+[![GitHub license](https://img.shields.io/github/license/cr1901/prog-vb.svg)](https://github.com/cr1901/prog-vb/blob/master/LICENSE.md)
+[![Last commit](https://img.shields.io/github/last-commit/cr1901/prog-vb.svg)](https://GitHub.com/cr1901/prog-vb/commit/)
+[![Contact Me](https://img.shields.io/twitter/follow/cr1901.svg?label=Contact%20Me&&style=social)](https://twitter.com/cr1901)
+
 `prog-vb` is a simple open source utility for programming your
 FlashBoy (Plus) development cart from the command line.
 
