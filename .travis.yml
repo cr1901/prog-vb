@@ -15,13 +15,6 @@ matrix:
     # Linux
     - env: TARGET=x86_64-unknown-linux-gnu
 
-    # OSX
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-
-    # Windows
-    - env: TARGET=x86_64-pc-windows-gnu
-
 before_install:
   - set -e
   - sudo apt-get install -y tofrodos zip
@@ -60,6 +53,7 @@ branches:
     # release tags
     - /^v\d+\.\d+\.\d+.*$/
     - master
+    - trust
 
 notifications:
   email:
