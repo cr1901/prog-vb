@@ -27,6 +27,12 @@ present, so no need to mess with VIDs or PIDs.
 Command line invocation is subject to change. The accepted arguments/usage
 is display if a user types `prog-vb -h`.
 
+When running the program for the first time on Windows 10, it is possible that
+Windows Defender SmartScreen will block the app. As a workaround, click
+"More information" on the warning window, and there will be an option to run
+the program anyway. You should only need to do this once. _There is not much I
+can do about this at present, as I don't have a code-signing certificate._
+
 ## TODO
 * Automatic padding of ROMs.
 * Skip erase/erase-only option.
