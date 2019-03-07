@@ -25,6 +25,8 @@ fixes in between minor versions.
 ### Fixed
 - By adding padding support, fix cryptic error message where ROMs < 2MB
   would fail when EOF was reached.
+- Use `-v` version command-line argument to test that binaries are loaded
+  properly and exit with success code (`0`).
 
 ## v0.9.0 - 2019-03-04
 ### Added
