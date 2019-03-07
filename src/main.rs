@@ -7,7 +7,7 @@ extern crate indicatif;
 use std::fs::File;
 use std::io::Read;
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, Print};
 use exitfailure::ExitFailure;
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -128,10 +128,13 @@ fn main() -> Result<(), ExitFailure> {
         ap.refer(&mut rom)
             .add_argument("rom", Store, "Virtual Boy ROM image to flash.")
             .required();
+        ap.add_option(&["-v"],
+            Print(option_env!("CARGO_PKG_VERSION").unwrap_or("No version- compiled without Cargo.").to_string()), "Show version.");
         ap.parse_args_or_exit();
     }
 
     let mut f = File::open(rom)?;
+
     let mut flash = FlashBoy::open()?;
 
     println!("Erasing device...");
