@@ -16,6 +16,8 @@ pub mod vb_prog {
     use hidapi;
     use failure::Fail;
 
+    pub const HEADER_LEN : usize = 512 + 32;  // ROM metadata + Interrupt vectors
+
     pub struct FlashBoy {
         dev : hidapi::HidDevice,
     }
@@ -125,15 +127,24 @@ fn main() -> Result<(), ExitFailure> {
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("Command-line Virtual Boy Flash Programmer");
+        ap.add_option(&["-v"],
+                Print(option_env!("CARGO_PKG_VERSION")
+                        .unwrap_or("No version- compiled without Cargo.")
+                        .to_string()), "Show version.");
         ap.refer(&mut rom)
             .add_argument("rom", Store, "Virtual Boy ROM image to flash.")
             .required();
-        ap.add_option(&["-v"],
-            Print(option_env!("CARGO_PKG_VERSION").unwrap_or("No version- compiled without Cargo.").to_string()), "Show version.");
         ap.parse_args_or_exit();
     }
 
-    let mut f = File::open(rom)?;
+    let mut f = File::open(&rom)?;
+    let f_len = f.metadata()?.len();
+
+    if !(f_len > 16*1024 && f_len <= 2*1024*1024 && f_len.is_power_of_two()) {
+        let f_err = std::io::Error::new(std::io::ErrorKind::InvalidData,
+             "Input ROM was less than 16kB in length, greater than 2MB in length, or a non power of two length.");
+        return Err(From::from(f_err));
+    }
 
     let mut flash = FlashBoy::open()?;
 
@@ -144,7 +155,9 @@ fn main() -> Result<(), ExitFailure> {
     let tok = flash.init_prog()?;
 
     let mut buf = [0; 1024];
+    let mut header = [0; HEADER_LEN];
     let mut packet_cnt = 0;
+    let header_packet = (f_len / 1024) - 1;
 
     let pb = ProgressBar::new(2048);
     pb.set_style(ProgressStyle::default_bar()
@@ -152,7 +165,24 @@ fn main() -> Result<(), ExitFailure> {
         .progress_chars("#>-"));
 
     while packet_cnt < 2048 {
-        f.read_exact(&mut buf)?;
+        if packet_cnt <= header_packet {
+            f.read_exact(&mut buf)?;
+        } else {
+            // Flashboy optimizes for 0xFF chunks when programming.
+            for i in buf.iter_mut() {
+                *i = 0xFF;
+            };
+        }
+
+        // We only need to pad if the ROM is < 2MB.
+        if header_packet != 2047 {
+            if packet_cnt == header_packet {
+                header.copy_from_slice(buf.split_at_mut(1024 - HEADER_LEN).1);
+            } else if packet_cnt == 2047 {
+                buf.split_at_mut(1024 - HEADER_LEN).1.copy_from_slice(&header);
+            }
+        }
+
         flash.write_chunk(&tok, &buf)?;
         packet_cnt += 1;
         pb.set_position(packet_cnt);
