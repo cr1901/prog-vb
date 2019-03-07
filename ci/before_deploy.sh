@@ -30,7 +30,7 @@ main() {
     cross rustc --bin prog-vb --target $TARGET --release -- -C lto
 
     mkdir $stage/$CRATE_NAME-$TRAVIS_TAG
-    cp target/$TARGET/release/prog-vb$suffix LICENSE.md README.md $stage/$CRATE_NAME-$TRAVIS_TAG
+    cp target/$TARGET/release/prog-vb$suffix CHANGELOG.md LICENSE.md README.md $stage/$CRATE_NAME-$TRAVIS_TAG
 
     cd $stage
     if [ $TARGET = x86_64-pc-windows-gnu ]; then
