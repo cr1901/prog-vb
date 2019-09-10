@@ -149,7 +149,7 @@ fn main() -> Result<(), ExitFailure> {
 
     let mut flash = FlashBoy::open()?;
 
-    stdoutln!("Erasing device...")?;
+    stdoutln!("Erasing device (5-10 seconds)...")?;
     flash.erase()?;
 
     stdoutln!("Flashing...")?;
