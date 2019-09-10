@@ -10,3 +10,6 @@ argparse = "0.2.2"
 failure = "0.1.5"
 exitfailure = "0.5.1"
 indicatif = "0.11.0"
+
+[dependencies.calm_io]
+git="https://github.com/myrrlyn/calm_io"

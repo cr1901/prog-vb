@@ -2,6 +2,7 @@ extern crate failure;
 extern crate hidapi;
 extern crate exitfailure;
 extern crate indicatif;
+extern crate calm_io;
 
 use std::fs::File;
 use std::io::Read;
@@ -9,6 +10,7 @@ use std::io::Read;
 use argparse::{ArgumentParser, Store, Print};
 use exitfailure::ExitFailure;
 use indicatif::{ProgressBar, ProgressStyle};
+use calm_io::stdoutln;
 
 
 pub mod vb_prog {
@@ -147,10 +149,10 @@ fn main() -> Result<(), ExitFailure> {
 
     let mut flash = FlashBoy::open()?;
 
-    println!("Erasing device...");
+    stdoutln!("Erasing device...")?;
     flash.erase()?;
 
-    println!("Flashing...");
+    stdoutln!("Flashing...")?;
     let tok = flash.init_prog()?;
 
     let mut buf = [0; 1024];
@@ -188,6 +190,6 @@ fn main() -> Result<(), ExitFailure> {
     }
 
     pb.finish();
-    println!("Image flashed successfully.");
+    stdoutln!("Image flashed successfully.")?;
     Ok(())
 }
