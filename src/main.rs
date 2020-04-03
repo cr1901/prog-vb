@@ -1,30 +1,29 @@
+extern crate calm_io;
+extern crate exitfailure;
 extern crate failure;
 extern crate hidapi;
-extern crate exitfailure;
 extern crate indicatif;
-extern crate calm_io;
 
 use std::fs::File;
 use std::io::Read;
 
-use argparse::{ArgumentParser, Store, Print};
+use argparse::{ArgumentParser, Print, Store};
+use calm_io::stdoutln;
 use exitfailure::ExitFailure;
 use indicatif::{ProgressBar, ProgressStyle};
-use calm_io::stdoutln;
-
 
 pub mod vb_prog {
-    use hidapi;
     use failure::Fail;
+    use hidapi;
 
-    pub const HEADER_LEN : usize = 512 + 32;  // ROM metadata + Interrupt vectors
+    pub const HEADER_LEN: usize = 512 + 32; // ROM metadata + Interrupt vectors
 
     pub struct FlashBoy {
-        dev : hidapi::HidDevice,
+        dev: hidapi::HidDevice,
     }
 
     pub struct WriteToken {
-        _int : (),
+        _int: (),
     }
 
     impl FlashBoy {
@@ -33,15 +32,15 @@ pub mod vb_prog {
             let device = api.open(0x1781, 0x09a2).or(Err(Error::FlashboyNotFound))?;
 
             // Plenty of non-FlashBoy devices use Atmel micros, so check for string.
-            if !device.get_product_string()?
-                      .ok_or(Error::FlashboyNotFound)?
-                      .contains("FlashBoy") {
+            if !device
+                .get_product_string()?
+                .ok_or(Error::FlashboyNotFound)?
+                .contains("FlashBoy")
+            {
                 return Err(From::from(Error::FlashboyNotFound));
             }
 
-            Ok(FlashBoy {
-                dev : device,
-            })
+            Ok(FlashBoy { dev: device })
         }
 
         pub fn erase(&mut self) -> Result<(), failure::Error> {
@@ -62,10 +61,14 @@ pub mod vb_prog {
             buf[1] = Cmds::StartProg as u8;
             self.dev.write(&buf)?;
 
-            Ok(WriteToken { _int : () })
+            Ok(WriteToken { _int: () })
         }
 
-        pub fn write_chunk(&mut self, _tok: &WriteToken, buf : &[u8; 1024]) -> Result<(), failure::Error> {
+        pub fn write_chunk(
+            &mut self,
+            _tok: &WriteToken,
+            buf: &[u8; 1024],
+        ) -> Result<(), failure::Error> {
             let mut packet = [0; 65];
 
             packet[1] = Cmds::Write1024 as u8;
@@ -83,13 +86,13 @@ pub mod vb_prog {
             Ok(())
         }
 
-        fn check_response(&self, buf : &[u8], cmd : Cmds) -> Result<(), Error> {
+        fn check_response(&self, buf: &[u8], cmd: Cmds) -> Result<(), Error> {
             if buf[0] == (cmd as u8) {
-                return Ok(())
+                Ok(())
             } else {
                 match cmd {
-                    Cmds::Erase => { return Err(Error::UnexpectedEraseResponse { code : buf[1] }) },
-                    _ => { return Err(Error::UnexpectedWriteResponse { code : buf[1] }) },
+                    Cmds::Erase => Err(Error::UnexpectedEraseResponse { code: buf[1] }),
+                    _ => Err(Error::UnexpectedWriteResponse { code: buf[1] }),
                 }
             }
         }
@@ -108,17 +111,12 @@ pub mod vb_prog {
         FlashboyNotFound,
 
         #[fail(display = "Bad response from FlashBoy after erase command {:X}", code)]
-        UnexpectedEraseResponse {
-            code : u8,
-        },
+        UnexpectedEraseResponse { code: u8 },
 
         #[fail(display = "Bad response from FlashBoy after write command {:X}", code)]
-        UnexpectedWriteResponse {
-            code : u8,
-        },
+        UnexpectedWriteResponse { code: u8 },
     }
 }
-
 
 use self::vb_prog::*;
 
@@ -128,10 +126,15 @@ fn main() -> Result<(), ExitFailure> {
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("Command-line Virtual Boy Flash Programmer");
-        ap.add_option(&["-v"],
-                Print(option_env!("CARGO_PKG_VERSION")
-                        .unwrap_or("No version- compiled without Cargo.")
-                        .to_string()), "Show version.");
+        ap.add_option(
+            &["-v"],
+            Print(
+                option_env!("CARGO_PKG_VERSION")
+                    .unwrap_or("No version- compiled without Cargo.")
+                    .to_string(),
+            ),
+            "Show version.",
+        );
         ap.refer(&mut rom)
             .add_argument("rom", Store, "Virtual Boy ROM image to flash.")
             .required();
@@ -141,7 +144,7 @@ fn main() -> Result<(), ExitFailure> {
     let mut f = File::open(&rom)?;
     let f_len = f.metadata()?.len();
 
-    if !(f_len > 16*1024 && f_len <= 2*1024*1024 && f_len.is_power_of_two()) {
+    if !(f_len > 16 * 1024 && f_len <= 2 * 1024 * 1024 && f_len.is_power_of_two()) {
         let f_err = std::io::Error::new(std::io::ErrorKind::InvalidData,
              "Input ROM was less than 16kB in length, greater than 2MB in length, or a non power of two length.");
         return Err(From::from(f_err));
@@ -161,9 +164,11 @@ fn main() -> Result<(), ExitFailure> {
     let header_packet = (f_len / 1024) - 1;
 
     let pb = ProgressBar::new(2048);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("[{elapsed_precise}] [{bar:40}] {pos}/{len} packets ({eta})")
-        .progress_chars("#>-"));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] [{bar:40}] {pos}/{len} packets ({eta})")
+            .progress_chars("#>-"),
+    );
 
     while packet_cnt < 2048 {
         if packet_cnt <= header_packet {
@@ -172,7 +177,7 @@ fn main() -> Result<(), ExitFailure> {
             // Flashboy optimizes for 0xFF chunks when programming.
             for i in buf.iter_mut() {
                 *i = 0xFF;
-            };
+            }
         }
 
         // We only need to pad if the ROM is < 2MB.
@@ -180,7 +185,9 @@ fn main() -> Result<(), ExitFailure> {
             if packet_cnt == header_packet {
                 header.copy_from_slice(buf.split_at_mut(1024 - HEADER_LEN).1);
             } else if packet_cnt == 2047 {
-                buf.split_at_mut(1024 - HEADER_LEN).1.copy_from_slice(&header);
+                buf.split_at_mut(1024 - HEADER_LEN)
+                    .1
+                    .copy_from_slice(&header);
             }
         }
 
