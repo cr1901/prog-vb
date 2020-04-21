@@ -1,20 +1,19 @@
 extern crate calm_io;
-extern crate exitfailure;
-extern crate failure;
 extern crate hidapi;
 extern crate indicatif;
+extern crate eyre;
 
 use std::fs::File;
 use std::io::Read;
 
 use argparse::{ArgumentParser, Print, Store};
 use calm_io::stdoutln;
-use exitfailure::ExitFailure;
 use indicatif::{ProgressBar, ProgressStyle};
+use eyre::{Report, DefaultContext};
 
 pub mod vb_prog {
-    use failure::Fail;
     use hidapi;
+    use super::{Report, DefaultContext};
 
     pub const HEADER_LEN: usize = 512 + 32; // ROM metadata + Interrupt vectors
 
@@ -27,7 +26,7 @@ pub mod vb_prog {
     }
 
     impl FlashBoy {
-        pub fn open() -> Result<FlashBoy, failure::Error> {
+        pub fn open() -> Result<FlashBoy, Report<DefaultContext>> {
             let api = hidapi::HidApi::new()?;
             let device = api.open(0x1781, 0x09a2).or(Err(Error::FlashboyNotFound))?;
 
@@ -43,7 +42,7 @@ pub mod vb_prog {
             Ok(FlashBoy { dev: device })
         }
 
-        pub fn erase(&mut self) -> Result<(), failure::Error> {
+        pub fn erase(&mut self) -> Result<(), Report<DefaultContext>> {
             let mut buf = [0; 65];
 
             buf[1] = Cmds::Erase as u8;
@@ -55,7 +54,7 @@ pub mod vb_prog {
             Ok(())
         }
 
-        pub fn init_prog(&mut self) -> Result<WriteToken, failure::Error> {
+        pub fn init_prog(&mut self) -> Result<WriteToken, Report<DefaultContext>> {
             let mut buf = [0; 65];
 
             buf[1] = Cmds::StartProg as u8;
@@ -68,7 +67,7 @@ pub mod vb_prog {
             &mut self,
             _tok: &WriteToken,
             buf: &[u8; 1024],
-        ) -> Result<(), failure::Error> {
+        ) -> Result<(), Report<DefaultContext>> {
             let mut packet = [0; 65];
 
             packet[1] = Cmds::Write1024 as u8;
@@ -105,22 +104,29 @@ pub mod vb_prog {
         Write1024 = 0xB4,
     }
 
-    #[derive(Debug, Fail)]
+    #[derive(Debug)]
     pub enum Error {
-        #[fail(display = "Could not find Flashboy Plus device")]
         FlashboyNotFound,
-
-        #[fail(display = "Bad response from FlashBoy after erase command {:X}", code)]
         UnexpectedEraseResponse { code: u8 },
-
-        #[fail(display = "Bad response from FlashBoy after write command {:X}", code)]
         UnexpectedWriteResponse { code: u8 },
     }
+
+    impl std::fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Error::FlashboyNotFound => write!(f, "FlashBoy was not found"),
+                Error::UnexpectedEraseResponse { code } => write!(f, "Unexpected response when erasing ({})", code),
+                Error::UnexpectedWriteResponse { code } => write!(f, "Unexpected response when writing ({})", code),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {}
 }
 
 use self::vb_prog::*;
 
-fn main() -> Result<(), ExitFailure> {
+fn main() -> Result<(), Report<DefaultContext>> {
     let mut rom = String::new();
 
     {

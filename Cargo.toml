@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 hidapi = "1.0.1"
 argparse = "0.2.2"
-failure = "0.1.5"
-exitfailure = "0.5.1"
 indicatif = "0.12.0"
 calm_io = "0.1.1"
+eyre = "0.3"
