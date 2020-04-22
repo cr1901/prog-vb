@@ -1,19 +1,19 @@
 extern crate calm_io;
+extern crate eyre;
 extern crate hidapi;
 extern crate indicatif;
-extern crate eyre;
 
 use std::fs::File;
 use std::io::Read;
 
 use argparse::{ArgumentParser, Print, Store};
 use calm_io::stdoutln;
+use eyre::{Report, WrapErr};
 use indicatif::{ProgressBar, ProgressStyle};
-use eyre::{Report, DefaultContext};
 
 pub mod vb_prog {
+    use super::{Report, WrapErr};
     use hidapi;
-    use super::{Report, DefaultContext};
 
     pub const HEADER_LEN: usize = 512 + 32; // ROM metadata + Interrupt vectors
 
@@ -26,23 +26,34 @@ pub mod vb_prog {
     }
 
     impl FlashBoy {
-        pub fn open() -> Result<FlashBoy, Report<DefaultContext>> {
+        pub fn open() -> Result<FlashBoy, Report> {
             let api = hidapi::HidApi::new()?;
-            let device = api.open(0x1781, 0x09a2).or(Err(Error::FlashboyNotFound))?;
+            let device = api
+                .open(0x1781, 0x09a2)
+                .or_else(|e| Err(Error::FlashboyNotFound(Some(e))))
+                .wrap_err("No USB device with VID:PID 0x1781:0x09a2 was found.")?;
 
             // Plenty of non-FlashBoy devices use Atmel micros, so check for string.
             if !device
-                .get_product_string()?
-                .ok_or(Error::FlashboyNotFound)?
+                .get_product_string()
+                .or_else(|e| Err(Error::FlashboyNotFound(Some(e))))?
+                .ok_or(Error::FlashboyNotFound(None))
+                .wrap_err(
+                    "USB device with VID:PID 0x1781:0x9a2 found, but the product string\n\
+                     was empty. Stopping to be safe.",
+                )?
                 .contains("FlashBoy")
             {
-                return Err(From::from(Error::FlashboyNotFound));
+                return Err(Error::FlashboyNotFound(None)).wrap_err(
+                    "A USB device with VID:PID 0x1781:0x9a2 was found, but it wasn't a\n\
+                     FlashBoy. Do you have multiple Atmel devices attached?",
+                );
             }
 
             Ok(FlashBoy { dev: device })
         }
 
-        pub fn erase(&mut self) -> Result<(), Report<DefaultContext>> {
+        pub fn erase(&mut self) -> Result<(), Report> {
             let mut buf = [0; 65];
 
             buf[1] = Cmds::Erase as u8;
@@ -54,7 +65,7 @@ pub mod vb_prog {
             Ok(())
         }
 
-        pub fn init_prog(&mut self) -> Result<WriteToken, Report<DefaultContext>> {
+        pub fn init_prog(&mut self) -> Result<WriteToken, Report> {
             let mut buf = [0; 65];
 
             buf[1] = Cmds::StartProg as u8;
@@ -63,11 +74,7 @@ pub mod vb_prog {
             Ok(WriteToken { _int: () })
         }
 
-        pub fn write_chunk(
-            &mut self,
-            _tok: &WriteToken,
-            buf: &[u8; 1024],
-        ) -> Result<(), Report<DefaultContext>> {
+        pub fn write_chunk(&mut self, _tok: &WriteToken, buf: &[u8; 1024]) -> Result<(), Report> {
             let mut packet = [0; 65];
 
             packet[1] = Cmds::Write1024 as u8;
@@ -106,7 +113,7 @@ pub mod vb_prog {
 
     #[derive(Debug)]
     pub enum Error {
-        FlashboyNotFound,
+        FlashboyNotFound(Option<hidapi::HidError>),
         UnexpectedEraseResponse { code: u8 },
         UnexpectedWriteResponse { code: u8 },
     }
@@ -114,19 +121,37 @@ pub mod vb_prog {
     impl std::fmt::Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                Error::FlashboyNotFound => write!(f, "FlashBoy was not found"),
-                Error::UnexpectedEraseResponse { code } => write!(f, "Unexpected response when erasing ({})", code),
-                Error::UnexpectedWriteResponse { code } => write!(f, "Unexpected response when writing ({})", code),
+                Error::FlashboyNotFound(_) => write!(f, "FlashBoy was not found"),
+                Error::UnexpectedEraseResponse { code } => write!(
+                    f,
+                    "Unexpected response {} when erasing, expected {}",
+                    code,
+                    Cmds::Erase as u8
+                ),
+                Error::UnexpectedWriteResponse { code } => write!(
+                    f,
+                    "Unexpected response {} when writing, expected {}",
+                    code,
+                    Cmds::Write1024 as u8
+                ),
             }
         }
     }
 
-    impl std::error::Error for Error {}
+    impl std::error::Error for Error {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            match self {
+                // Error::FlashboyNotFound(Some(e)) => Some(&e), Why does this error?
+                Error::FlashboyNotFound(Some(e)) => Some(e),
+                _ => None,
+            }
+        }
+    }
 }
 
 use self::vb_prog::*;
 
-fn main() -> Result<(), Report<DefaultContext>> {
+fn main() -> Result<(), Report> {
     let mut rom = String::new();
 
     {
@@ -151,8 +176,11 @@ fn main() -> Result<(), Report<DefaultContext>> {
     let f_len = f.metadata()?.len();
 
     if !(f_len > 16 * 1024 && f_len <= 2 * 1024 * 1024 && f_len.is_power_of_two()) {
-        let f_err = std::io::Error::new(std::io::ErrorKind::InvalidData,
-             "Input ROM was less than 16kB in length, greater than 2MB in length, or a non power of two length.");
+        let f_err = std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Input ROM was less than 16kB in length, greater than 2MB in length,\n\
+             or a non power of two length.",
+        );
         return Err(From::from(f_err));
     }
 
@@ -178,7 +206,11 @@ fn main() -> Result<(), Report<DefaultContext>> {
 
     while packet_cnt < 2048 {
         if packet_cnt <= header_packet {
-            f.read_exact(&mut buf)?;
+            f.read_exact(&mut buf).wrap_err(format!(
+                "File {} must be read in 1024-byte chunks.\n\
+                 Chunk {} was not read properly.",
+                rom, packet_cnt
+            ))?;
         } else {
             // Flashboy optimizes for 0xFF chunks when programming.
             for i in buf.iter_mut() {
