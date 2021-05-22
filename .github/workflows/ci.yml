@@ -32,6 +32,36 @@ jobs:
           command: build
           args: --target=${{ matrix.target }}
           use-cross: true
+      - name: Release build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target=${{ matrix.target }} --release
+          use-cross: true
+      - name: Debug test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --target=${{ matrix.target }}
+          use-cross: true
+      - name: Release test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --target=${{ matrix.target }} --release
+          use-cross: true
+      - name: Debug run
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --target=${{ matrix.target }} -- -v
+          use-cross: true
+      - name: Release run
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --target=${{ matrix.target }} --release -- -v
+          use-cross: true
       - name: "Create release"
         if: startsWith(github.ref, 'refs/tags/v')
         run: echo "Release placeholder"
