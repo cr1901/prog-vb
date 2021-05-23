@@ -26,52 +26,68 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-pc-windows-gnu
     env:
-      CRATE_NAME: prob-vb
+      CRATE_NAME: prog-vb
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+
       - name: Build custom Docker image
+        # All Linux targets need libusb.
         if: matrix.os == 'ubuntu-latest' && (matrix.target != 'x86_64-pc-windows-gnu')
         run: docker build -t prog-vb/${{ matrix.target }} ci/docker/${{ matrix.target }}
+
       - name: Debug build
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: build
           args: --target=${{ matrix.target }}
           use-cross: true
+
       - name: Release build
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: build
           args: --target=${{ matrix.target }} --release
           use-cross: true
+
       - name: Debug test
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: test
           args: --target=${{ matrix.target }}
           use-cross: true
+
       - name: Release test
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: test
           args: --target=${{ matrix.target }} --release
           use-cross: true
+
       - name: Debug run
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: run
           args: --target=${{ matrix.target }} -- -v
           use-cross: true
+
       - name: Release run
         uses: actions-rs/cargo@v1
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           command: run
           args: --target=${{ matrix.target }} --release -- -v
           use-cross: true
+
       - name: "Prepare release"
         env:
           OS: ${{ matrix.os }}
@@ -81,10 +97,16 @@ jobs:
         run: |
           chmod +x ${GITHUB_WORKSPACE}/ci/prepare_release.sh
           ${GITHUB_WORKSPACE}/ci/prepare_release.sh
+
+      # https://github.com/softprops/action-gh-release/issues/4#issuecomment-540245702
+      - if: startsWith(github.ref, 'refs/tags/v')
+        id: release
+        run: echo ::set-output name=version::${CRATE_NAME}-${GITHUB_REF#refs/*/}-${{ matrix.target }}
+
       - name: "Create release"
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: ${CRATE_NAME}-${GITHUB_REF#refs/*/}-${{ matrix.target }}.*
+          files: ${{ steps.release.outputs.version }}.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -28,6 +28,9 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
+    # If we're doing a release, cross won't be there yet!
+    cargo install cross
+
     # TODO Update this to build the artifacts that matter to you
     # FIXME: LTO is not being honored.
     CARGO_PROFILE_RELEASE_LTO="thin" cross build --target $TARGET --release
