@@ -1,5 +1,5 @@
 # Command Line Virtual Boy Flash Programmer
-[![Build Status](https://travis-ci.org/cr1901/prog-vb.svg?branch=master)](https://travis-ci.org/cr1901/prog-vb)
+[![Build Status](https://github.com/cr1901/prog-vb/actions/workflows/ci.yml/badge.svg)](https://github.com/cr1901/prog-vb/actions)
 [![GitHub release](https://img.shields.io/github/release/cr1901/prog-vb.svg)](https://github.com/cr1901/prog-vb/releases)
 [![GitHub license](https://img.shields.io/github/license/cr1901/prog-vb.svg)](https://github.com/cr1901/prog-vb/blob/master/LICENSE.md)
 [![Last commit](https://img.shields.io/github/last-commit/cr1901/prog-vb.svg)](https://GitHub.com/cr1901/prog-vb/commit/)

@@ -79,8 +79,8 @@ jobs:
           TARGET: ${{ matrix.target }}
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          chmod +x ${GITHUB_WORKSPACE}/.github/prepare_release.sh
-          ${GITHUB_WORKSPACE}/.github/prepare_release.sh
+          chmod +x ${GITHUB_WORKSPACE}/ci/prepare_release.sh
+          ${GITHUB_WORKSPACE}/ci/prepare_release.sh
       - name: "Create release"
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
