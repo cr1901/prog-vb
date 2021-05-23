@@ -18,7 +18,16 @@ prematurely "ended" my VB homebrew career :P).
 
 In addition, Mac/Linux users may find this application useful, since I'm
 unaware of a Mac/Linux-based solution for FlashBoy. Releases can be found
-[here](https://github.com/cr1901/prog-vb/releases).
+[here](https://github.com/cr1901/prog-vb/releases). Currently releases are
+made for the following Rust targets:
+
+* `aarch64-unknown-linux-gnu`
+* `armv7-unknown-linux-gnueabihf`
+* `x86_64-apple-darwin`
+* `x86_64-unknown-linux-gnu`
+* `x86_64-pc-windows-gnu`
+
+If you want a new target added to CI, ask me and I'll make a point release.
 
 Why did I make this? For fun, mostly. I wanted an excuse to write some Rust.
 And I've always wanted an open source version of the programmer :).
