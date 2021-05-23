@@ -7,7 +7,7 @@ main() {
           stage= \
           suffix=
 
-    TAG="v0.10.0"
+    TAG="${GITHUB_REF/refs\/tags\//}"
 
     case $OS in
         ubuntu-latest)
@@ -29,6 +29,7 @@ main() {
     test -f Cargo.lock || cargo generate-lockfile
 
     # TODO Update this to build the artifacts that matter to you
+    # FIXME: LTO is not being honored.
     CARGO_PROFILE_RELEASE_LTO="thin" cross build --target $TARGET --release
 
     mkdir $stage/$CRATE_NAME-$TAG
